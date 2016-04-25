@@ -1,7 +1,7 @@
 /*  
  *   For a Desk lamp with an ESP-01 chip.
  *   Most code by Thomas Friberg
- *   Updated 25/04/2016
+ *   Updated 26/04/2016
  */
 
 // Import ESP8266 libraries
@@ -15,8 +15,8 @@ const int defaultFade = 15;
 const int ledPin = 2; //LED pin number
 
 // WiFi parameters
-const char* ssid = "TheSubway"; //Enter your WiFi network name here in the quotation marks
-const char* password = "vanillamoon576"; //Enter your WiFi pasword here in the quotation marks
+const char* ssid = ""; //Enter your WiFi network name here in the quotation marks
+const char* password = ""; //Enter your WiFi pasword here in the quotation marks
 
 //Server details
 unsigned int localPort = 5007;  //UDP send port
