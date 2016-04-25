@@ -34,25 +34,19 @@ String data = "";
 WiFiUDP Udp; //Instance to send UDP packets
 
 //--------------------------------------------------------------
-
 void setup()
 {
   SetupLines();
 }
-
 //--------------------------------------------------------------
-
 void loop()
 {
   data=ParseUdpPacket(); //Code for receiving UDP messages
-
   if (data!="") {
     ProcessMessage(data);//Conditionals for switching based on LED signal
   }
-  
   FadeLEDs(); //Fading script
 }
-
 //--------------------------------------------------------------
 
 void SetupLines() {
@@ -124,11 +118,8 @@ void ProcessMessage(String dataIn) {
     //Enables slow fading
     if (message.startsWith("fade")) { 
       int messagePos=message.indexOf(" ");
-      //Serial.println("Position of space is " + messagePos);
       String fadeVal=message.substring(4,messagePos);
-      //Serial.println("Fade value is " + fadeVal);
       fadeSpeed=atoi(fadeVal.c_str());
-      //Serial.println("Fade speed set to " + fadeSpeed);
       message=message.substring(messagePos+1); //Cutting 'fade' from the message
       Serial.println("Custom fade increment speed of " + fadeVal + " miliseconds trigged");
       Serial.println("Message trimmed to : " + message);
