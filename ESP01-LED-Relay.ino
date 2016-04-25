@@ -1,7 +1,7 @@
 /*  
  *   For a Desk lamp with an ESP-01 chip.
  *   Most code by Thomas Friberg
- *   Updated 25/04/2016
+ *   Updated 26/04/2016
  */
 
 // Import ESP8266 libraries
