@@ -9,9 +9,9 @@
 #include <WiFiUdp.h>
 
 //Sensor details
-const char* sensorID1 = "LED003"; //Name of sensor
-const char* deviceDescription = "Living room lamp";
-const int defaultFade = 15;
+const char* sensorID1 = "LED005"; //Name of sensor
+const char* deviceDescription = "Hallway Lamp";
+const int defaultFade = 15; //Miliseconds between fade intervals
 const int ledPin = 2; //LED pin number
 
 // WiFi parameters
@@ -24,30 +24,45 @@ const char* ipAdd = "192.168.0.100"; //Server address
 byte packetBuffer[512]; //buffer for incoming packets
 
 //Sensor variables
-int ledSetPoint = 0;
 int ledPinState = 0; //Default boot state of LEDs and last setPoint of the pin between 0 and 100
+int ledSetPoint = 0;
 int brightness = 100; //last 'on' setpoint for 0-100 scale brightness
-static const unsigned int PWMTable[101] = {0,1,2,3,5,6,7,8,9,10,12,13,14,16,18,20,21,24,26,28,31,33,36,39,42,45,49,52,56,60,64,68,72,77,82,87,92,98,103,109,115,121,128,135,142,149,156,164,172,180,188,197,206,215,225,235,245,255,266,276,288,299,311,323,336,348,361,375,388,402,417,432,447,462,478,494,510,527,544,562,580,598,617,636,655,675,696,716,737,759,781,803,826,849,872,896,921,946,971,997,1023}; //0 to 100 values for brightness to account for the human eye's perception of brightness
+static const unsigned int PWMTable[101] = {0,1,2,3,5,6,7,8,9,10,12,13,14,16,18,20,21,24,26,28,31,33,36,39,42,45,49,52,56,60,64,68,72,77,82,87,92,98,103,109,115,121,128,135,142,149,156,164,172,180,188,197,206,215,225,235,245,255,266,276,288,299,311,323,336,348,361,375,388,402,417,432,447,462,478,494,510,527,544,562,580,598,617,636,655,675,696,716,737,759,781,803,826,849,872,896,921,946,971,997,1023}; //0 to 100 values for brightnes
 int fadeSpeed = defaultFade; //Time between fade intervals - 20ms between change in brightness
 String data = "";
+int timerCount = 0;
 
-WiFiUDP Udp; //Instance to send UDP packets
+WiFiUDP Udp; //Instance to send packets
+
 
 //--------------------------------------------------------------
+
 void setup()
 {
   SetupLines();
 }
+
 //--------------------------------------------------------------
+
+
 void loop()
 {
+  //Check timer state
+  CheckTimer();
+  
   data=ParseUdpPacket(); //Code for receiving UDP messages
   if (data!="") {
-    ProcessMessage(data);//Conditionals for switching based on LED signal
+    ProcessLedMessage(data);//Conditionals for switching based on LED signal
   }
+  
   FadeLEDs(); //Fading script
 }
+
 //--------------------------------------------------------------
+
+
+
+
 
 void SetupLines() {
   //Set pins and turn off LED
@@ -82,11 +97,12 @@ void SetupLines() {
   ledSetPoint=0; // input a setpoint for fading as we enter the loop
 }
 
+
 String ParseUdpPacket() {
   int noBytes = Udp.parsePacket();
   String udpData = "";
   if ( noBytes ) {
-    Serial.print("Packet of ");
+    Serial.print("---Packet of ");
     Serial.print(noBytes);
     Serial.print(" characters received from ");
     Serial.print(Udp.remoteIP());
@@ -104,28 +120,47 @@ String ParseUdpPacket() {
   return udpData;
 }
 
-void ProcessMessage(String dataIn) {
+void ProcessLedMessage(String dataIn) {
   String devID = "";
   String message = "";
 
   devID=dataIn.substring(0,6); //Break down the message in to it's parts
-  message=dataIn.substring(7);
   Serial.println("DevID reads after processing: " + devID);
+  message=dataIn.substring(7);
   Serial.println("Message reads after processing: " + message);
   
-  if (devID.substring(0,3)=="LED") { //Only do this set of commands if there is a message for an LED device
+  if (devID==sensorID1) { //Only do this set of commands if there is a message for an LED device
     
     //Enables slow fading
     if (message.startsWith("fade")) { 
       int messagePos=message.indexOf(" ");
+      //Serial.println("Position of space is " + messagePos);
       String fadeVal=message.substring(4,messagePos);
+      //Serial.println("Fade value is " + fadeVal);
       fadeSpeed=atoi(fadeVal.c_str());
+      //Serial.println("Fade speed set to " + fadeSpeed);
       message=message.substring(messagePos+1); //Cutting 'fade' from the message
       Serial.println("Custom fade increment speed of " + fadeVal + " miliseconds trigged");
       Serial.println("Message trimmed to : " + message);
     }
     else {
       fadeSpeed=defaultFade;
+    }
+
+    //Enables timed commands
+    if (message.startsWith("timer")) { 
+      int messagePos=message.indexOf(" ");
+      //Serial.println("Position of space is " + messagePos);
+      String timerVal=message.substring(5,messagePos);
+      //Serial.println("Fade value is " + fadeVal);
+      timerCount=atoi(timerVal.c_str());
+      //Serial.println("Fade speed set to " + fadeSpeed);
+      message=message.substring(messagePos+1); //Cutting 'timer' from the message
+      Serial.println("Custom timer of " + timerVal + " seconds set");
+      Serial.println("Message trimmed to: " + message);
+    }
+    else {
+      timerCount=0;
     }
 
     //Enables instant toggling
@@ -188,9 +223,26 @@ void FadeLEDs() {
   }
 }
 
+void CheckTimer() {
+  if(millis() % 1000 == 0) {
+    if(timerCount==0) {
+      //Do nothing
+    }
+    else if (timerCount>1) {
+      timerCount=timerCount-1;
+      Serial.println("Timer value reduced to " + String(timerCount) + "");
+    }
+    else {
+      timerCount=timerCount-1;
+      SendUdpValue("FWD",sensorID1,"off");
+    }
+    delay(1);
+  }
+}
+
 void SendUdpValue(String type, String sensorID, String value) {
   //Print GPIO state in serial
-  Serial.print("Value sent via UDP: ");
+  Serial.print("-Value sent via UDP: ");
   Serial.println(type + "," + sensorID + "," + value);
 
   // send a message, to the IP address and port
@@ -202,4 +254,3 @@ void SendUdpValue(String type, String sensorID, String value) {
   Udp.print(value); //This is the value to be sent
   Udp.endPacket();
 }
-
